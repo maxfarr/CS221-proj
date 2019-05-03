@@ -1,8 +1,9 @@
 import numpy as np
 from collections import defaultdict
 import random
+import pandas as pd
 
-def learnCounts():
+def learnCounts(strings):
     counts = {}
     for string in strings:
         words = string.split()
@@ -39,6 +40,9 @@ def generate(counts, n = 10):
     return words
 
 def main():
-    counts = learnCounts()
+    df = pd.read_csv("popular_quotes.csv")
+    df = df.drop('Unnamed: 0', 1)
+    quotes = df.text
+    counts = learnCounts(quotes)
     sentence = generate(counts)
     print(sentence)
