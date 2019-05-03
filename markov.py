@@ -17,9 +17,10 @@ def learnCounts():
 
 def generate(counts, n = 10):
     words = [np.random.choice(counts)]
-
     while counts[words[0]][0] == 0: words[0] = np.random.choice(counts)
-    for i in range(n):
+
+    i = 0
+    while i < n:
         value = random.randint(0, counts[words[i]] - 1)
         position = 0
         nextWord = ""
@@ -29,7 +30,11 @@ def generate(counts, n = 10):
             if value < position:
                 nextWord = possible
 
+        if(counts[nextWord][0] == 0 and i != n - 1):
+            continue
+
         words.append(nextWord)
+        i += 1
 
     return words
 
