@@ -9,12 +9,12 @@ import pandas as pd
 df_popular = pd.DataFrame.from_csv("popular_quotes.csv")
 possible_tags = set()
 for t in df_popular.tags:
-    tags = [x.strip()[1:-1] for x in t[1:-1].split(',')]
+    tags = [x.strip()[1:-1] for x in t[1:-1].split(",")]
     for tag in tags:
         possible_tags.add(tag)
 url = "https://www.goodreads.com/quotes/tag/{}?page={}"
 
-num = 1;
+num = 1
 list_of_df = []
 for tag in possible_tags:
     page = requests.get(url.format(tag, 1))
