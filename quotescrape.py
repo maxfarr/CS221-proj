@@ -49,8 +49,3 @@ for tag in possible_tags:
 big_df = pd.concat(list_of_df)
 big_df.drop_duplicates(inplace=True)
 big_df.to_csv("tagged_quotes.csv")
-        
-
-
-
-
