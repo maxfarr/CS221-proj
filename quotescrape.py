@@ -5,6 +5,8 @@ import collections
 from bs4 import BeautifulSoup
 import requests
 import pandas as pd
+from numba import jit
+
 
 df_popular = pd.DataFrame.from_csv("popular_quotes.csv")
 possible_tags = set()
@@ -13,6 +15,7 @@ for t in df_popular.tags:
     for tag in tags:
         possible_tags.add(tag)
 url = "https://www.goodreads.com/quotes/tag/{}?page={}"
+
 
 num = 1
 list_of_df = []
@@ -32,10 +35,7 @@ for tag in possible_tags:
         page = requests.get(url.format(tag, i))
         soup = BeautifulSoup(page.text, 'html.parser')
         container = soup.body.find(class_="mainContentFloat").find(class_ = "leftContainer")
-        quotes = container.find(class_="quotes")
-        if(quotes == None):
-            continue
-        quotes = quotes.find_all(class_="quote")
+        quotes = container.find_all("div", attrs={"class": "quote"})
         for quote in quotes:
             text = quote.find("div").find("div").contents[0].strip()[1:-1]
             author = quote.find("div").find("div").find("span").contents[0].strip()
@@ -44,9 +44,11 @@ for tag in possible_tags:
             likes = int(likes)
             tags = quote.find("div").find(attrs={"class": "quoteFooter"}).find("div").find_all("a")
             taglist = [tag.contents[0] for tag in tags]
+            taglist = ", ".join(taglist)
             features = {"text": text, "author": author, "likes": likes, "tags": taglist}
             quotefeatures.append(features)
-    list_of_df.append(pd.DataFrame(quotefeatures))
+    df = pd.DataFrame(quotefeatures)
+    list_of_df.append(df)
 big_df = pd.concat(list_of_df)
-big_df.drop_duplicates(inplace=True)
+big_df.drop_duplicates(subset = ["text", "author", "likes", "tags"], inplace=True)
 big_df.to_csv("tagged_quotes.csv", index_label=False)
