@@ -19,6 +19,12 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="clean_data.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="lstm.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="main.py" />
     <Compile Include="markov.py" />
     <Compile Include="oracle.py">

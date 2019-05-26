@@ -1,6 +1,6 @@
 import pandas as pd
-
-if name == "__main__":
+import random
+if __name__ == "__main__":
     df = pd.read_csv("popular_quotes.csv")
     df = df.drop('Unnamed: 0', 1)
 
