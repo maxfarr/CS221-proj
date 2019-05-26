@@ -16,7 +16,7 @@ import argparse
 data_file = "popular_quotes_clean.csv"
 BATCH_SIZE = 40
 HIDDEN_DIM = 60
-
+#h
 def build_vocab(df):
     corpus = [x.split() for x in df["text"].astype(str).tolist()]
     corpus = set([x for sublist in corpus for x in sublist] + ["<eos>"])
