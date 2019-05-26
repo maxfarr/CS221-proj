@@ -30,11 +30,6 @@ if args.data_path:
 def build_vocab(df):
     corpus = [x.split() for x in df["text"].astype(str).tolist()]
     corpus = set([x for sublist in corpus for x in sublist] + ["<eos>"])
-
-    #counter = collections.Counter(data)
-    #count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
-
-    #words, _ = list(zip(*count_pairs))
     word_to_id = dict(zip(corpus, range(len(corpus))))
 
     return word_to_id
@@ -44,9 +39,8 @@ def file_to_word_ids(df, word_to_id):
     text = df.text.astype(str).tolist()
     data = []
     for sent in text:
-        for word in sent:
-            if word in word_to_id:
-                data.append(word_to_id[word])
+        for word in sent.split():
+            data.append(word_to_id[word])
         data.append(word_to_id["<eos>"])
     return data
 
