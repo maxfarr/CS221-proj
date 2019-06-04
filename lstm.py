@@ -12,6 +12,8 @@ import random
 import numpy as np
 import pandas as pd
 import argparse
+from sklearn.model_selection import GridSearchCV
+from keras.wrappers.scikit_learn import KerasClassifier
 
 data_file = "popular_quotes_clean.csv"
 custom = True
@@ -73,17 +75,33 @@ for i, sentence in enumerate(text_to_ids):
             if custom:
                 y[i, t, -1] = likes[i]
 
+def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):
+    mod = Sequential()
+    mod.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
+    #model.add(LSTM(HIDDEN_DIM, return_sequences=True))
+    mod.add(TimeDistributed(Dense(vector_dim)))
+    if custom:    
+        mod.add(Dense(vocab_len+1, activation='softmax'))
+    else:
+        mod.add(Dense(vocab_len, activation='softmax'))
+    mod.add(Activation('softmax'))
+
+    optimizer = Adam(lr=learning_rate, beta_1=b_1, beta_2=b_2)
+    if custom:
+        mod.compile(loss='categorical_crossentropy', optimizer=optimizer)
+    else:
+        mod.compile(loss=custom_loss, optimizer = optimizer)
+    return mod
+
+p_grid = {
+    "learning_rate" : [0.001, 0.01, 0.1, 0.2],
+    "beta_1" : [0.6, 0.75, 0.9],
+    "beta_2" : [0.7, 0.8, 0.999]
+}
+
 # build the model: a single LSTM
 print('Build model...')
-model = Sequential()
-model.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
-#model.add(LSTM(HIDDEN_DIM, return_sequences=True))
-model.add(TimeDistributed(Dense(vector_dim)))
-if custom:    
-    model.add(Dense(vocab_len+1, activation='softmax'))
-else:
-    model.add(Dense(vocab_len, activation='softmax'))
-model.add(Activation('softmax'))
+model = GridSearchCV(KerasClassifier(build_fn = build_lstm), param_grid=p_grid)
 
 def custom_loss(target, output, from_logits=False, axis=-1):
     """Categorical crossentropy between an output tensor and a target tensor.
@@ -125,13 +143,6 @@ def custom_loss(target, output, from_logits=False, axis=-1):
     else:
         return tf.nn.softmax_cross_entropy_with_logits(labels=target,
                                                        logits=output)
-
-if custom:
-    optimizer = Adam(lr=0.01)
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer)
-else:
-    optimizer = Adam(lr=0.01)
-    mode.compile(loss=custom_loss, optimizer = optimizer)
 
 
 def sample(preds, temperature=1.0):
