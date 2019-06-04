@@ -60,7 +60,7 @@ maxlen = 32
 text_to_ids = [sentence for sentence in text_to_ids if len(sentence) < maxlen]
 #maxlen = max([len(sentence) for sentence in text_to_ids])
 likes = df["likes"].astype(int).tolist()
-likes = [like / sum(likes) for like in likes] * 1000
+likes = [like / sum(likes) for like in likes]
 #create_input and output
 x = np.zeros((len(text_to_ids), maxlen, vector_dim))
 if custom:
@@ -75,7 +75,7 @@ for i, sentence in enumerate(text_to_ids):
             if custom:
                 y[i, t, -1] = likes[i]
 
-def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):
+def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999, adjust_likes = 1000):
     mod = Sequential()
     mod.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
     #model.add(LSTM(HIDDEN_DIM, return_sequences=True))
@@ -90,20 +90,21 @@ def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):
     if custom:
         mod.compile(loss='categorical_crossentropy', optimizer=optimizer)
     else:
-        mod.compile(loss=custom_loss, optimizer = optimizer)
+        mod.compile(loss=custom_loss(adjust_likes=adjust_likes), optimizer = optimizer)
     return mod
 
 p_grid = {
     "learning_rate" : [0.001, 0.01, 0.1, 0.2],
     "beta_1" : [0.6, 0.75, 0.9],
     "beta_2" : [0.7, 0.8, 0.999]
+    "adjust_likes" : [1, 10, 100, 1000, 10000]
 }
 
 # build the model: a single LSTM
 print('Build model...')
 model = GridSearchCV(KerasClassifier(build_fn = build_lstm), param_grid=p_grid)
 
-def custom_loss(target, output, from_logits=False, axis=-1):
+def custom_loss(target, output, from_logits=False, axis=-1, adjust_likes=1000):
     """Categorical crossentropy between an output tensor and a target tensor.
     # Arguments
         target: A tensor of the same shape as `output`.
@@ -139,7 +140,7 @@ def custom_loss(target, output, from_logits=False, axis=-1):
         # manual computation of crossentropy
         _epsilon = _to_tensor(epsilon(), output.dtype.base_dtype)
         output = tf.clip_by_value(output, _epsilon, 1. - _epsilon)
-        return - tf.reduce_sum(target * tf.log(output), axis) * likes
+        return - tf.reduce_sum(target * tf.log(output), axis) * likes * adjust_likes)
     else:
         return tf.nn.softmax_cross_entropy_with_logits(labels=target,
                                                        logits=output)
