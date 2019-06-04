@@ -75,7 +75,7 @@ for i, sentence in enumerate(text_to_ids):
             if custom:
                 y[i, t, -1] = likes[i]
 
-def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):
+def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999, ep=None):
     mod = Sequential()
     mod.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
     #model.add(LSTM(HIDDEN_DIM, return_sequences=True))
@@ -86,7 +86,7 @@ def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):
         mod.add(Dense(vocab_len, activation='softmax'))
     mod.add(Activation('softmax'))
 
-    optimizer = Adam(lr=learning_rate, beta_1=b_1, beta_2=b_2)
+    optimizer = Adam(lr=learning_rate, beta_1=b_1, beta_2=b_2, epsilon=ep)
     if custom:
         mod.compile(loss='categorical_crossentropy', optimizer=optimizer)
     else:
@@ -96,7 +96,8 @@ def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):
 p_grid = {
     "learning_rate" : [0.001, 0.01, 0.1, 0.2],
     "beta_1" : [0.6, 0.75, 0.9],
-    "beta_2" : [0.7, 0.8, 0.999]
+    "beta_2" : [0.7, 0.8, 0.999],
+    "ep" : [None, 0.0001, 0.1]
 }
 
 # build the model: a single LSTM
