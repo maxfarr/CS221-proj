@@ -64,7 +64,7 @@ likes = [like / sum(likes) for like in likes]
 #create_input and output
 x = np.zeros((len(text_to_ids), maxlen, vector_dim))
 if custom:
-    y = np.zeros((len(text_to_ids), maxlen, vocab_len + 1)) #m by vocab_len + 1
+    y = np.zeros((len(text_to_ids), maxlen, vocab_len + 1)) #m by vocab_len
 else:
     y = np.zeros((len(text_to_ids), maxlen, vocab_len)) #m by vocab_len
 for i, sentence in enumerate(text_to_ids):
@@ -75,7 +75,7 @@ for i, sentence in enumerate(text_to_ids):
             if custom:
                 y[i, t, -1] = likes[i]
 
-def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):#, adjust_likes = 1000):
+def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999, adjust_likes = 1000):
     mod = Sequential()
     mod.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
     #model.add(LSTM(HIDDEN_DIM, return_sequences=True))
@@ -84,20 +84,20 @@ def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):#, adjust_likes = 1000):
         mod.add(Dense(vocab_len+1, activation='softmax'))
     else:
         mod.add(Dense(vocab_len, activation='softmax'))
-    #mod.add(Activation('softmax'))
+    mod.add(Activation('softmax'))
 
     optimizer = Adam(lr=learning_rate, beta_1=b_1, beta_2=b_2)
     if custom:
-        mod.compile(loss=custom_loss(adjust_likes=adjust_likes), optimizer=optimizer)
+        mod.compile(loss='categorical_crossentropy', optimizer=optimizer)
     else:
-        mod.compile(loss='categorical_crossentropy', optimizer = optimizer)
+        mod.compile(loss=custom_loss(adjust_likes=adjust_likes), optimizer = optimizer)
     return mod
 
 p_grid = {
     "learning_rate" : [0.001, 0.01, 0.1, 0.2],
-    "b_1" : [0.6, 0.75, 0.9],
-    "b_2" : [0.7, 0.8, 0.999]
-    #"adjust_likes" : [1, 10, 100, 1000, 10000]
+    "beta_1" : [0.6, 0.75, 0.9],
+    "beta_2" : [0.7, 0.8, 0.999]
+    "adjust_likes" : [1, 10, 100, 1000, 10000]
 }
 
 # build the model: a single LSTM
@@ -140,7 +140,7 @@ def custom_loss(target, output, from_logits=False, axis=-1, adjust_likes=1000):
         # manual computation of crossentropy
         _epsilon = _to_tensor(epsilon(), output.dtype.base_dtype)
         output = tf.clip_by_value(output, _epsilon, 1. - _epsilon)
-        return - tf.reduce_sum(target * tf.log(output), axis) * likes * adjust_likes
+        return - tf.reduce_sum(target * tf.log(output), axis) * likes * adjust_likes)
     else:
         return tf.nn.softmax_cross_entropy_with_logits(labels=target,
                                                        logits=output)
@@ -175,18 +175,6 @@ def on_epoch_end(epoch, _):
             next_word = id_to_word[next_index]
 
             sentence = sentence + " " + next_word
-        ind_sentence = [word_to_id[word] for word in sentence.split()]
-        for i in range(1, len(ind_sentence) - 2):
-            x_pred = np.zeros((1, maxlen, vector_dim))
-            for t, word in enumerate(ind_sentence):
-                x_pred[0, t] = embedding[word]
-
-            preds = model.predict(x_pred, verbose=0)[0]
-            replace_index = len(ind_sentence) - i
-            replace_val = sample(preds[replace_index])
-            ind_sentence[replace_index] = replace_val
-
-        sentence = " ".join([id_to_word[id] for id in ind_sentence])
         print(sentence)
 
         
