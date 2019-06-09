@@ -75,7 +75,7 @@ for i, sentence in enumerate(text_to_ids):
             if custom:
                 y[i, t, -1] = likes[i]
 
-def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999, adjust_likes = 1000):
+def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):
     mod = Sequential()
     mod.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
     #model.add(LSTM(HIDDEN_DIM, return_sequences=True))
@@ -97,7 +97,7 @@ p_grid = {
     "learning_rate" : [0.001, 0.01, 0.1, 0.2],
     "beta_1" : [0.6, 0.75, 0.9],
     "beta_2" : [0.7, 0.8, 0.999]
-    "adjust_likes" : [1, 10, 100, 1000, 10000]
+    #"adjust_likes" : [1, 10, 100, 1000, 10000]
 }
 
 # build the model: a single LSTM
@@ -138,9 +138,9 @@ def custom_loss(target, output, from_logits=False, axis=-1, adjust_likes=1000):
         # scale preds so that the class probas of each sample sum to 1
         output /= tf.reduce_sum(output, axis, True)
         # manual computation of crossentropy
-        _epsilon = _to_tensor(epsilon(), output.dtype.base_dtype)
+        _epsilon = _to_tensor(K.epsilon(), output.dtype.base_dtype)
         output = tf.clip_by_value(output, _epsilon, 1. - _epsilon)
-        return - tf.reduce_sum(target * tf.log(output), axis) * likes * adjust_likes)
+        return -(tf.reduce_sum(target * tf.log(output), axis) * likes * adjust_likes)
     else:
         return tf.nn.softmax_cross_entropy_with_logits(labels=target,
                                                        logits=output)
