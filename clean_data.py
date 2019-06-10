@@ -31,7 +31,7 @@ def create_corpus(csv):
     corpus = set([x for sublist in corpus for x in sublist])
 
 df_list = []
-for filename in os.listdir(path):
+for filename in os.listdir(PATH):
     df_list.append(clean_csv(filename))
 df_big = pd.concat(df_list)
 df_big.to_csv("full_quotes_clean.csv", index=False)
