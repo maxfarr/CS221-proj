@@ -8,12 +8,11 @@ from keras.layers import LSTM
 from keras.optimizers import Adam
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint, EarlyStopping
+import keras.backend as K
 import random
 import numpy as np
 import pandas as pd
 import argparse
-from sklearn.model_selection import GridSearchCV
-from keras.wrappers.scikit_learn import KerasClassifier
 
 data_file = "popular_quotes_clean.csv"
 custom = False
@@ -34,7 +33,7 @@ def embed(df):
     vocab = {w: idx for idx, w in enumerate(words)}
     ivocab = {idx: w for idx, w in enumerate(words)}
     print("intook embedding")
-    vector_dim = len(vectors[ivocab[0]])
+    vector_dim = len(vectors["the"])
     W = np.zeros((vocab_size, vector_dim))
     for i in range(vocab_size):
         if ivocab[i] in vectors:
@@ -60,7 +59,7 @@ maxlen = 32
 text_to_ids = [sentence for sentence in text_to_ids if len(sentence) < maxlen]
 #maxlen = max([len(sentence) for sentence in text_to_ids])
 likes = df["likes"].astype(int).tolist()
-likes = [like / sum(likes) for like in likes]
+likes = [like / sum(likes) for like in likes] * 10000
 #create_input and output
 x = np.zeros((len(text_to_ids), maxlen, vector_dim))
 if custom:
@@ -75,36 +74,19 @@ for i, sentence in enumerate(text_to_ids):
             if custom:
                 y[i, t, -1] = likes[i]
 
-def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):#, adjust_likes = 1000):
-    mod = Sequential()
-    mod.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
-    #model.add(LSTM(HIDDEN_DIM, return_sequences=True))
-    mod.add(TimeDistributed(Dense(vector_dim)))
-    if custom:    
-        mod.add(Dense(vocab_len+1, activation='softmax'))
-    else:
-        mod.add(Dense(vocab_len, activation='relu'))
-    mod.add(Activation('softmax'))
-
-    optimizer = Adam(lr=learning_rate, beta_1=b_1, beta_2=b_2)
-    if custom:
-        mod.compile(loss=custom_loss(), optimizer=optimizer)
-    else:
-        mod.compile(loss="categorical_crossentropy", optimizer = optimizer)
-    return mod
-
-p_grid = {
-    "learning_rate" : [0.001, 0.01, 0.1, 0.2],
-    "b_1" : [0.6, 0.75, 0.9],
-    "b_2" : [0.7, 0.8, 0.999]
-    #"adjust_likes" : [1, 10, 100, 1000, 10000]
-}
-
 # build the model: a single LSTM
 print('Build model...')
-model = GridSearchCV(KerasClassifier(build_fn = build_lstm), param_grid=p_grid)
+model = Sequential()
+model.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
+#model.add(LSTM(HIDDEN_DIM, return_sequences=True))
+model.add(TimeDistributed(Dense(vector_dim)))
+if custom:    
+    model.add(Dense(vocab_len + 1, activation='softmax'))
+else:
+    model.add(Dense(vocab_len, activation='relu'))
+model.add(Activation('softmax'))
 
-def custom_loss(target, output, from_logits=False, axis=-1, adjust_likes=1000):
+def custom_loss(target, output, from_logits=False, axis=-1):
     """Categorical crossentropy between an output tensor and a target tensor.
     # Arguments
         target: A tensor of the same shape as `output`.
@@ -123,9 +105,10 @@ def custom_loss(target, output, from_logits=False, axis=-1, adjust_likes=1000):
         ValueError: if `axis` is neither -1 nor one of
             the axes of `output`.
     """
+    output = output[:, :, :-1]
     output_dimensions = list(range(len(output.get_shape())))
-    likes = target[-1]
-    target = target[:-1]
+    likes = target[:, :,-1]
+    target = target[:, :, :-1]
     if axis != -1 and axis not in output_dimensions:
         raise ValueError(
             '{}{}{}'.format(
@@ -138,12 +121,19 @@ def custom_loss(target, output, from_logits=False, axis=-1, adjust_likes=1000):
         # scale preds so that the class probas of each sample sum to 1
         output /= tf.reduce_sum(output, axis, True)
         # manual computation of crossentropy
-        _epsilon = _to_tensor(epsilon(), output.dtype.base_dtype)
-        output = tf.clip_by_value(output, _epsilon, 1. - _epsilon)
-        return - tf.reduce_sum(target * tf.log(output), axis) * likes * adjust_likes
+        _epsilon = tf.convert_to_tensor(K.epsilon(), output.dtype.base_dtype)
+        output = tf.clip_by_value(output, _epsilon, 1. - _epsilon) 
+        return - tf.reduce_sum(target * tf.log(output), axis) * likes
     else:
         return tf.nn.softmax_cross_entropy_with_logits(labels=target,
                                                        logits=output)
+
+if custom:
+    optimizer = Adam(lr=0.01)
+    model.compile(loss=custom_loss, optimizer=optimizer)
+else:
+    optimizer = Adam(lr=0.01)
+    model.compile(loss="categorical_crossentropy", optimizer = optimizer)
 
 
 def sample(preds, temperature=1.0):
@@ -159,6 +149,7 @@ def on_epoch_end(epoch, _):
     # Function invoked at end of each epoch. Prints generated text.
     print()
     print('----- Generating text after Epoch: %d' % epoch)
+    
     
     for i in range(5):
         sentence = "<bos>"
@@ -189,9 +180,9 @@ def on_epoch_end(epoch, _):
 
         
 print_callback = LambdaCallback(on_epoch_end=on_epoch_end)
-es = EarlyStopping(monitor='val_loss')
+es = EarlyStopping(monitor='val_loss', mode='min', verbose=1)
 model.fit(x, y,
           batch_size=BATCH_SIZE,
           epochs=20,
           callbacks=[print_callback, es])
-model.save("popular_quotes_grid.hdf5")
+model.save("popular_quotes_embed.hdf5")
