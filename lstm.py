@@ -75,7 +75,7 @@ for i, sentence in enumerate(text_to_ids):
             if custom:
                 y[i, t, -1] = likes[i]
 
-def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):#, adjust_likes = 1000):
+def build_lstm(learning_rate=0.01, b_1=0.9, b_2=0.999):
     mod = Sequential()
     mod.add(Bidirectional(LSTM(maxlen, return_sequences=True)))
     #model.add(LSTM(HIDDEN_DIM, return_sequences=True))
@@ -104,7 +104,7 @@ p_grid = {
 print('Build model...')
 model = GridSearchCV(KerasClassifier(build_fn = build_lstm), param_grid=p_grid)
 
-def custom_loss(target, output, from_logits=False, axis=-1, adjust_likes=1000):
+def custom_loss(target, output, from_logits=False, axis=-1):
     """Categorical crossentropy between an output tensor and a target tensor.
     # Arguments
         target: A tensor of the same shape as `output`.
@@ -138,9 +138,9 @@ def custom_loss(target, output, from_logits=False, axis=-1, adjust_likes=1000):
         # scale preds so that the class probas of each sample sum to 1
         output /= tf.reduce_sum(output, axis, True)
         # manual computation of crossentropy
-        _epsilon = _to_tensor(epsilon(), output.dtype.base_dtype)
+        _epsilon = _to_tensor(K.epsilon(), output.dtype.base_dtype)
         output = tf.clip_by_value(output, _epsilon, 1. - _epsilon)
-        return - tf.reduce_sum(target * tf.log(output), axis) * likes * adjust_likes
+        return -(tf.reduce_sum(target * tf.log(output), axis) * likes * adjust_likes)
     else:
         return tf.nn.softmax_cross_entropy_with_logits(labels=target,
                                                        logits=output)

@@ -1,8 +1,8 @@
-# import libraries
 import collections
 from bs4 import BeautifulSoup
 import requests
 import pandas as pd
+import os
 
 url = "https://www.goodreads.com/quotes/tag/{}?page={}"
 
@@ -18,7 +18,7 @@ def process(data, session):
                 lastpage = container.find("div", attrs={"style": "float: right;"}).div.contents[-3].contents[0]
                 lastpage = int(lastpage)
 
-        print("{} | {}, {} pages".format(data[0], data[1], lastpage))
+        os.write(1, "{} | {}, {} pages\n".format(data[0], data[1], lastpage).encode())
         
         quotefeatures = []
         for i in range(lastpage):
